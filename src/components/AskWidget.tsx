@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ZapIcon } from './icons/ZapIcon';
+import { AutocompleteSearch } from './AutocompleteSearch';
 
 interface AskWidgetProps {
   onClick?: () => void;
@@ -21,6 +21,8 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
   const [showExpanded, setShowExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showTitle, setShowTitle] = useState(true);
+  const [titleTimeout, setTitleTimeout] = useState<NodeJS.Timeout | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([
     { icon: 'sparkle', text: 'Top Stories' },
     { icon: 'sparkle', text: 'Breaking News' },
@@ -39,6 +41,31 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isExpanded, isAnimating]);
+
+  // Handle title visibility based on search query
+  useEffect(() => {
+    if (searchQuery) {
+      // Hide title immediately when typing
+      setShowTitle(false);
+      // Clear any existing timeout
+      if (titleTimeout) {
+        clearTimeout(titleTimeout);
+        setTitleTimeout(null);
+      }
+    } else {
+      // Show title after 1 second when search is empty
+      const timeout = setTimeout(() => {
+        setShowTitle(true);
+      }, 1000);
+      setTitleTimeout(timeout);
+    }
+
+    return () => {
+      if (titleTimeout) {
+        clearTimeout(titleTimeout);
+      }
+    };
+  }, [searchQuery]);
 
   const handleSearch = () => {
     console.log('Searching for:', searchQuery);
@@ -96,7 +123,7 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
   return (
     <div className="relative inline-block" ref={containerRef}>
       <motion.div 
-        className="relative bg-gradient-to-r from-[#C081FF]/30 to-[#B8FFE3]/30 p-[1px]"
+        className="relative bg-gradient-to-br from-[#B8FFE3] to-[#C081FF] p-[1px]"
         initial={{ borderRadius: 41 }}
         animate={{ 
           borderRadius: isExpanded ? 30 : 41,
@@ -104,7 +131,7 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
       >
         <motion.div 
-          className="relative overflow-hidden"
+          className="relative overflow-hidden bg-[#3a3a3a] backdrop-blur-sm border border-white/5"
           initial={{ width: 101.18, height: 49 }}
           animate={{ 
             width: isExpanded ? 346 : 101.18, 
@@ -113,8 +140,7 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
           }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
           style={{
-            background: isExpanded ? '#5C5C5C' : '#4E4E4E',
-            boxShadow: '0px 1.3px 15.3px rgba(0,0,0,0.1)',
+            boxShadow: '0 4px 20px 0 rgba(0, 0, 0, 0.3)',
           }}
         >
 
@@ -138,7 +164,7 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
                     className="w-4 h-4 absolute"
                     style={{ left: '8px' }}
                   />
-                  <span className="bg-gradient-to-r from-[#B8FFE3] to-[#C081FF] bg-clip-text text-transparent font-medium text-sm absolute" style={{ left: '28px' }}>Ask</span>
+                  <span className="text-white font-medium text-sm absolute" style={{ left: '28px' }}>Ask</span>
                   <Image 
                     src="/times.png" 
                     alt="NY Times" 
@@ -167,48 +193,29 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
                   transition: { duration: 0.1, ease: "easeOut" }
                 }}
               >
-                <h2 className="text-white text-xl mb-4 font-sans">
+                {/* Title - keep space reserved */}
+                <motion.h2 
+                  className="text-white font-normal text-xl mb-4" 
+                  style={{ fontFamily: 'var(--font-work-sans), "Work Sans", sans-serif', height: '56px' }}
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: showTitle ? 1 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
                   Ask New York Times<br />Anything!
-                </h2>
+                </motion.h2>
                 
-                {/* Search input */}
+                {/* Search input with Algolia Autocomplete */}
                 <div className="relative mb-4">
-                  <div className="relative bg-gradient-to-r from-[#C081FF]/30 to-[#B8FFE3]/30 p-[1px] rounded-full">
-                    <div className="relative bg-[#5B5B5B] rounded-full overflow-hidden">
-                      <div className="absolute inset-0 px-4 py-4 pointer-events-none">
-                        <span className="bg-gradient-to-r from-[#B8FFE3] to-[#C081FF] bg-clip-text text-transparent font-sans font-medium text-sm">
-                          {searchQuery || 'Ask anything'}
-                        </span>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder=""
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full px-4 py-4 pr-12 bg-transparent rounded-full 
-                                 font-sans font-medium text-sm
-                                 focus:outline-none
-                                 hover:bg-white/[0.02] transition-all duration-200"
-                        style={{
-                          color: 'transparent',
-                          caretColor: '#B8FFE3'
-                        }}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') handleSearch();
-                        }}
-                        autoFocus
+                  <div className="relative bg-gradient-to-r from-[#B8FFE3]/60 to-[#C081FF]/60 p-[1px] rounded-full">
+                    <div className="relative bg-[#3a3a3a] rounded-full">
+                      <AutocompleteSearch
+                        placeholder="Ask anything"
+                        onSubmit={handleSearch}
+                        searchQuery={searchQuery}
+                        onSearchQueryChange={setSearchQuery}
                       />
                     </div>
                   </div>
-                  <button className="absolute right-4 top-1/2 -translate-y-1/2">
-                    <Image 
-                      src="/Tab Bar.png" 
-                      alt="Tab Bar" 
-                      width={30} 
-                      height={30}
-                      className="w-[30px] h-[30px]"
-                    />
-                  </button>
                 </div>
 
                 {/* Suggestions */}
@@ -221,8 +228,9 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
                         transition={{ 
-                          enter: { delay: 0.1 + i * 0.1, duration: 0.4, ease: "easeOut" },
-                          exit: { duration: 0.3, ease: "easeIn" }
+                          delay: 0.1 + i * 0.1, 
+                          duration: 0.4, 
+                          ease: "easeOut" 
                         }}
                       >
                       <button
@@ -252,11 +260,12 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
                 </div>
 
                 {/* More button */}
-                <div className="mt-4 bg-gradient-to-r from-[#C081FF]/30 to-[#B8FFE3]/30 p-[1px] rounded-full">
+                <div className="mt-4 bg-gradient-to-r from-[#B8FFE3]/60 to-[#C081FF]/60 p-[1px] rounded-full">
                   <button
                     onClick={loadMoreSuggestions}
-                    className="w-full h-[30px] bg-[#4E4E4E] rounded-full text-white/70 hover:text-white
-                             transition-colors flex items-center justify-center gap-2 font-sans"
+                    className="w-full h-[30px] bg-[#3a3a3a] border border-white/10 rounded-full 
+                             text-white/70 hover:text-white hover:bg-[#4a4a4a]
+                             transition-all flex items-center justify-center gap-2 font-sans"
                   >
                     <Image 
                       src="/wand.png" 
