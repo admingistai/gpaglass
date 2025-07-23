@@ -20,6 +20,7 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
   const [showCollapsed, setShowCollapsed] = useState(true);
   const [showExpanded, setShowExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([
     { icon: 'sparkle', text: 'Top Stories' },
     { icon: 'sparkle', text: 'Breaking News' },
@@ -50,12 +51,19 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
   };
 
   const loadMoreSuggestions = () => {
-    setSuggestions([
-      { icon: '📰', text: 'Today\'s Headlines' },
-      { icon: '🌍', text: 'World News' },
-      { icon: '💼', text: 'Business Updates' },
-      { icon: '🎭', text: 'Arts & Culture' }
-    ]);
+    setIsLoadingMore(true);
+    // Fade out current suggestions
+    setTimeout(() => {
+      setSuggestions([
+        { icon: 'sparkle', text: 'Today\'s Headlines' },
+        { icon: 'sparkle', text: 'World News' },
+        { icon: 'sparkle', text: 'Business Updates' }
+      ]);
+      // Allow time for new suggestions to fade in
+      setTimeout(() => {
+        setIsLoadingMore(false);
+      }, 500);
+    }, 300);
   };
 
   const handleExpand = () => {
@@ -88,7 +96,7 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
   return (
     <div className="relative inline-block" ref={containerRef}>
       <motion.div 
-        className="relative bg-gradient-to-r from-[#C081FF] to-[#B8FFE3] p-[1px]"
+        className="relative bg-gradient-to-r from-[#C081FF]/30 to-[#B8FFE3]/30 p-[1px]"
         initial={{ borderRadius: 41 }}
         animate={{ 
           borderRadius: isExpanded ? 30 : 41,
@@ -96,7 +104,7 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
       >
         <motion.div 
-          className="relative backdrop-blur-md overflow-hidden bg-[#4E4E4E]"
+          className="relative overflow-hidden"
           initial={{ width: 101.18, height: 49 }}
           animate={{ 
             width: isExpanded ? 346 : 101.18, 
@@ -105,13 +113,10 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
           }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
           style={{
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
+            background: isExpanded ? '#5C5C5C' : '#4E4E4E',
             boxShadow: '0px 1.3px 15.3px rgba(0,0,0,0.1)',
           }}
         >
-        {/* Glass effect overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent pointer-events-none rounded-[30px]" />
 
         {/* Collapsed state */}
         <AnimatePresence>
@@ -151,7 +156,7 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
           <AnimatePresence>
             {showExpanded && (
               <motion.div
-                className="p-6 flex flex-col h-full"
+                className="p-6 pt-10 flex flex-col h-full"
                 initial={{ opacity: 0 }}
                 animate={{ 
                   opacity: 1,
@@ -162,13 +167,13 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
                   transition: { duration: 0.1, ease: "easeOut" }
                 }}
               >
-                <h2 className="text-white text-xl mb-6 font-sans">
-                  Ask New York Times Anything!
+                <h2 className="text-white text-xl mb-4 font-sans">
+                  Ask New York Times<br />Anything!
                 </h2>
                 
                 {/* Search input */}
-                <div className="relative mb-6">
-                  <div className="relative bg-gradient-to-r from-[#C081FF] to-[#B8FFE3] p-[1px] rounded-full">
+                <div className="relative mb-4">
+                  <div className="relative bg-gradient-to-r from-[#C081FF]/30 to-[#B8FFE3]/30 p-[1px] rounded-full">
                     <div className="relative bg-[#5B5B5B] rounded-full overflow-hidden">
                       <div className="absolute inset-0 px-4 py-4 pointer-events-none">
                         <span className="bg-gradient-to-r from-[#B8FFE3] to-[#C081FF] bg-clip-text text-transparent font-sans font-medium text-sm">
@@ -182,7 +187,8 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full px-4 py-4 pr-12 bg-transparent rounded-full 
                                  font-sans font-medium text-sm
-                                 focus:outline-none"
+                                 focus:outline-none
+                                 hover:bg-white/[0.02] transition-all duration-200"
                         style={{
                           color: 'transparent',
                           caretColor: '#B8FFE3'
@@ -207,17 +213,22 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
 
                 {/* Suggestions */}
                 <div className="flex-1 space-y-0">
-                  {suggestions.map((suggestion, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 1.0 + i * 0.1, duration: 0.4, ease: "easeOut" }}
-                    >
+                  <AnimatePresence mode="wait">
+                    {!isLoadingMore && suggestions.map((suggestion, i) => (
+                      <motion.div
+                        key={suggestion.text}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ 
+                          enter: { delay: 0.1 + i * 0.1, duration: 0.4, ease: "easeOut" },
+                          exit: { duration: 0.3, ease: "easeIn" }
+                        }}
+                      >
                       <button
                         onClick={() => handleSuggestionClick(suggestion.text)}
-                        className="w-full text-left px-4 py-3 text-white/90
-                                 hover:bg-white/5 transition-colors font-sans flex items-center gap-2"
+                        className="w-full text-left -ml-2.5 pl-1.5 pr-4 py-1.5 text-white
+                                 hover:bg-white/5 transition-colors font-sans text-sm flex items-center gap-2"
                       >
                         {suggestion.icon === 'sparkle' ? (
                           <Image 
@@ -233,20 +244,27 @@ export const AskWidget: React.FC<AskWidgetProps> = ({ onClick }) => {
                         {suggestion.text}
                       </button>
                       {i < suggestions.length - 1 && (
-                        <div className="border-b border-dotted border-[#343434]/30 mx-4" />
+                        <div className="border-b border-dashed border-white/40 mx-4" />
                       )}
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
 
                 {/* More button */}
-                <div className="mt-4 bg-gradient-to-r from-[#C081FF] to-[#B8FFE3] p-[1px] rounded-full">
+                <div className="mt-4 bg-gradient-to-r from-[#C081FF]/30 to-[#B8FFE3]/30 p-[1px] rounded-full">
                   <button
                     onClick={loadMoreSuggestions}
-                    className="w-full py-3 bg-[#1E1E1E] rounded-full text-white/70 hover:text-white
+                    className="w-full h-[30px] bg-[#4E4E4E] rounded-full text-white/70 hover:text-white
                              transition-colors flex items-center justify-center gap-2 font-sans"
                   >
-                    <ZapIcon className="w-4 h-4" />
+                    <Image 
+                      src="/wand.png" 
+                      alt="Wand" 
+                      width={16} 
+                      height={16}
+                      className="w-4 h-4"
+                    />
                     More
                   </button>
                 </div>
